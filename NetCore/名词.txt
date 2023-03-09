@@ -1,0 +1,17 @@
+ 　  HttpContext：请求上下文，对应Http请求的整个生命周期
+
+　　IHostingEnvironment：应用程序的运行的宿主环境配置信息
+
+　　ILogger：日志接口
+
+　　IConfiguration： 用于应用程序的配置
+
+　　IServiceCollection：Aspnet Core原生的依赖注入容器，负责服务注册
+
+　　IServiceProvider：负责解析注册的实例
+
+　　IApplicationBuilder：用于构建请求管道
+
+　　Middleware：中间件，管道的组成者
+
+　　WebHost：应用宿主
