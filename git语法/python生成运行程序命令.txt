@@ -1,0 +1,25 @@
+pyinstaller -F -i label.ico main.py -n 接小球游戏 --noconsole
+
+-F	打包成一个文件
+-D	打包成一个文件夹
+-n	重新命名
+--noconsole  去掉CMD命令窗口
+-i	加入图标，图标需要是ico格式
+
+1.一闪而过怎么办？
+原      因：打包的源码或环境有问题
+解决办法：打包成有命令窗口的exe，并将exe在cmd里运行，运行不成功会显示报错信息，然后根据报错信息修改
+
+2.打包后的文件太大怎么办？
+原      因：在python导包的时候，将包的全部函数打包成exe了
+解决办法：这里需要在代码里更改导包方式，例如将import sys改为from sys import exit
+
+3.缺少相关素材
+将代码里所有涉及到素材的文件都改成绝对路径（针对本台电脑）
+将相关素材的路径换成相对路径，并将所有素材和exe放到一个文件夹下（针对移植exe）
+
+4.pyintsaller --help
+关于pyinstaller功能最最最全面的解释，可以在cmd里直接使用命令得到：
+
+pyinstaller --help
+
