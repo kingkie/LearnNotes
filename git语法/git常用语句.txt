@@ -55,3 +55,8 @@ git clone http://git.scentrealm.com/wuhuipeng/scentmagicv2.0.git
 本地创建一个新分支并且关联远程分支
 git checkout -b local_dev origin/dev_dzy1
 这时 local_dev 已经和远程的 origin/dev_dzy1 一致了
+
+五、删除掉fork仓库
+https://gitee.com/XXXX/YYYYY/settings#clear
+其中XXXX是码云帐号
+YYYYY是项目名称
