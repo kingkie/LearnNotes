@@ -3,15 +3,17 @@
 
 1.初始化本地一个仓库
 git init
-2.查看当前仓库状态
+2.查看当前仓库状态；查看变更内容
 git status
+git diff
 3. 增加新修改的文件(. 表示增加所有)
 git add .
+git add <file> #增加指定文件
 4.提交修改到本地
 git commit -m "修改信息"
 5. 与远程连接关联(本地Git 项目与Github上的仓库进行关联)
-git remote add origin http://git.scentrealm.com/wuhuipeng/scentmagicv2.0.git
-5.本地Git 项目与Gitee上的仓库进行关联
+git remote add origin http://git.scentrealm.com/wuh/scentmagicv2.0.git
+6.本地Git 项目与Gitee上的仓库进行关联
 git remote set-url --add origin https://gitee.com/jinsx/oa.git
 
 7.设置远程分支
@@ -29,6 +31,20 @@ git merge origin/master
 
 11. 创建分支并提交到远程，需要--set-upstream origin 这个参数
 git push --set-upstream origin playlist
+
+12. 文件更改
+git mv <old> <new>
+
+13.git commit --amend #修改最后一次提交
+
+14.查看提交历史
+git log #查看提交历史
+git log -p <file> #查看指定文件的提交历史
+
+15.撤销
+git reset --hard HEAD #撤销工作目录中所有未提交文件的修改内容
+git checkout HEAD <file> #撤销指定的未提交文件的修改内容
+git revert <commit> #撤销指定的提交
 =================
 一、从master拉取新分支
 git checkout master 　 #切换到master分支
