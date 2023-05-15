@@ -1,0 +1,69 @@
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
+
+namespace WebApplication
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            CreateHostBuilder(args).Build().Run();
+        }
+
+        public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+                .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); });
+
+    }
+
+    public class Startup
+    {
+        // This method gets called by the runtime. Use this method to add services to the container.
+        // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
+        public void ConfigureServices(IServiceCollection services)
+        {
+            Console.WriteLine("Startup ConfigureServices");
+            //第1步
+            services.AddApplication<AppModule>();
+        }
+
+        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            Console.WriteLine("Startup InitializeApplication");
+            //第2步
+            app.InitializeApplication();
+        }
+    }
+
+    [DependsOn(typeof(AbpAspNetCoreMvcModule))]
+    public class AppModule : AbpModule
+    {
+        public override void OnApplicationInitialization(ApplicationInitializationContext context)
+        {
+            var app = context.GetApplicationBuilder();
+            var env = context.GetEnvironment();
+            Console.WriteLine("AppModule OnApplicationInitialization1 .");
+            //第3步
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+
+            app.UseRouting();
+
+            app.UseConfiguredEndpoints();
+        }
+    }
+
+    public class HomeController : AbpController
+    {
+        public IActionResult Index()
+        {
+            Console.WriteLine("HomeController Index!");
+            //第4步
+            return Content("Hello World ，This is My First WebSite!");
+        }
+    }
+}
+
