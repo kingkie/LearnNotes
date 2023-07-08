@@ -12,4 +12,3 @@ kafka:对采集的日志数据缓冲处理，防止logstash负载过高
 logstash:可直接采集日志，也可接受filebeat数据源，对日志进行分析过滤
 elasticsearch:日志数据通常使用elasticsearch
 kibana:可视化展示日志数据
-

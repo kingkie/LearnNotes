@@ -23,3 +23,19 @@ pyinstaller -F -i label.ico main.py -n 接小球游戏 --noconsole
 
 pyinstaller --help
 
+5.打开命令提示符，在某条路径下输入pip freeze > ./requirements.txt
+
+这时就会生成一个requirements.txt文件
+
+6.根据某一个项目的import语句来生成依赖
+打开命令提示符，将路径切换到需要生成依赖的项目的根目录下，依次输入：
+
+pip install pipreqs
+
+pipreqs ./
+
+执行完后，在这个项目下会生成一个requirements.txt文件，里面记录了该项目所用到的依赖
+
+7.在新环境下安装依赖包的模块：
+pip install -r requirements.txt
+

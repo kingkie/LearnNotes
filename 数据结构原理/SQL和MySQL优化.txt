@@ -1,0 +1,163 @@
+1.软删除，增加删除标志字段，删除时进行标志就行。
+2.对查询进行优化，应尽量避免全表扫描，首先应考虑在 where 及 order by 涉及的列上建立索引。
+3.应尽量避免在 where 子句中使用!=或<>操作符，否则将引擎放弃使用索引而进行全表扫描。
+4.应尽量避免在 where 子句中对字段进行 null 值判断，否则将导致引擎放弃使用索引而进行全表扫描，如：
+select id from t where num is null 
+可以在num上设置默认值0，确保表中num列没有null值，然后这样查询：
+select id from t where num=0 
+5.应尽量避免在 where 子句中使用 or 来连接条件，否则将导致引擎放弃使用索引而进行全表扫描，如：
+select id from t where num=10 or num=20 
+可以这样查询：
+select id from t where num=10 
+union all 
+select id from t where num=20 
+6.下面的查询也将导致全表扫描：select id from t where name like '%abc%' 
+可以设置全文检索，
+7.in 和 not in 也要慎用，否则会导致全表扫描，如：select id from t where num in(1,2,3) 
+对于连续的数值，能用 between 就不要用 in 了：select id from t where num between 1 and 3 
+8.如果在 where 子句中使用参数，也会导致全表扫描。因为SQL只有在运行时才会解析局部变量，但优化程序不能将访问计划的选择推迟到运行时；它必须在编译时进行选择。然而，如果在编译时建立访问计划，变量的值还是未知的，因而无法作为索引选择的输入项。如下面语句将进行全表扫描：select id from t where num=@num 
+可以改为强制查询使用索引：select id from t with(index(索引名)) where num=@num 
+9.应尽量避免在 where 子句中对字段进行表达式操作，这将导致引擎放弃使用索引而进行全表扫描。如：
+select id from t where num/2=100 应改为:select id from t where num=100*2 
+10.应尽量避免在where子句中对字段进行函数操作，这将导致引擎放弃使用索引而进行全表扫描。如：
+select id from t where substring(name,1,3)='abc'--name以abc开头的id 
+select id from t where datediff(day,createdate,'2005-11-30')=0--'2005-11-30'生成的id 
+应改为:
+select id from t where name like 'abc%' 
+select id from t where createdate>='2005-11-30' and createdate<'2005-12-1' 
+11.不要在 where 子句中的“=”左边进行函数、算术运算或其他表达式运算，否则系统将可能无法正确使用索引。
+12.在使用索引字段作为条件时，如果该索引是复合索引，那么必须使用到该索引中的第一个字段作为条件时才能保证系统使用该索引，否则该索引将不会被使用，并且应尽可能的让字段顺序与索引顺序相一致。
+13.不要写一些没有意义的查询，如需要生成一个空表结构：
+select col1,col2 into #t from t where 1=0 这类代码不会返回任何结果集，但是会消耗系统资源的，应改成这样：
+create table #t(...) 
+14.很多时候用 exists 代替 in 是一个好的选择：select num from a where num in(select num from b) 
+用下面的语句替换：select num from a where exists(select 1 from b where num=a.num) 
+15.并不是所有索引对查询都有效，SQL是根据表中数据来进行查询优化的，当索引列有大量数据重复时，SQL查询可能不会去利用索引，如一表中有字段sex，male、female几乎各一半，那么即使在sex上建了索引也对查询效率起不了作用。
+16.索引并不是越多越好，索引固然可以提高相应的 select 的效率，但同时也降低了 insert 及 update 的效率，因为 insert 或 update 时有可能会重建索引，所以怎样建索引需要慎重考虑，视具体情况而定。一个表的索引数最好不要超过6个，若太多则应考虑一些不常使用到的列上建的索引是否有必要。
+17.应尽可能的避免更新 clustered 索引数据列，因为 clustered 索引数据列的顺序就是表记录的物理存储顺序，一旦该列值改变将导致整个表记录的顺序的调整，会耗费相当大的资源。若应用系统需要频繁更新 clustered 索引数据列，那么需要考虑是否应将该索引建为 clustered 索引。
+18.尽量使用数字型字段，若只含数值信息的字段尽量不要设计为字符型，这会降低查询和连接的性能，并会增加存储开销。这是因为引擎在处理查询和连接时会逐个比较字符串中每一个字符，而对于数字型而言只需要比较一次就够了。
+19.尽可能的使用 varchar/nvarchar 代替 char/nchar ，因为首先变长字段存储空间小，可以节省存储空间，其次对于查询来说，在一个相对较小的字段内搜索效率显然要高些。
+20.任何地方都不要使用 select * from t ，用具体的字段列表代替“*”，不要返回用不到的任何字段。
+21.尽量使用表变量来代替临时表。如果表变量包含大量数据，请注意索引非常有限（只有主键索引）。
+22.避免频繁创建和删除临时表，以减少系统表资源的消耗。
+23.临时表并不是不可使用，适当地使用它们可以使某些例程更有效，例如，当需要重复引用大型表或常用表中的某个数据集时。但是，对于一次性事件，最好使用导出表。
+24.在新建临时表时，如果一次性插入数据量很大，那么可以使用 select into 代替 create table，避免造成大量 log ，以提高速度；如果数据量不大，为了缓和系统表的资源，应先create table，然后insert。
+25.如果使用到了临时表，在存储过程的最后务必将所有的临时表显式删除，先 truncate table ，然后 drop table ，这样可以避免系统表的较长时间锁定。
+26.尽量避免使用游标，因为游标的效率较差，如果游标操作的数据超过1万行，那么就应该考虑改写。
+27.使用基于游标的方法或临时表方法之前，应先寻找基于集的解决方案来解决问题，基于集的方法通常更有效。
+28.与临时表一样，游标并不是不可使用。对小型数据集使用 FAST_FORWARD 游标通常要优于其他逐行处理方法，尤其是在必须引用几个表才能获得所需的数据时。在结果集中包括“合计”的例程通常要比使用游标执行的速度快。如果开发时间允许，基于游标的方法和基于集的方法都可以尝试一下，看哪一种方法的效果更好。
+29.在所有的存储过程和触发器的开始处设置 SET NOCOUNT ON ，在结束时设置 SET NOCOUNT OFF 。无需在执行存储过程和触发器的每个语句后向客户端发送 DONE_IN_PROC 消息。
+30.尽量避免向客户端返回大数据量，若数据量过大，应该考虑相应需求是否合理，如分页。
+31.尽量避免大事务操作，提高系统并发能力。
+
+MySql设置优化
+1. MySQL非缓存参数变量介绍及修改
+    修改back_log参数值:由默认的50修改为500.(每个连接256kb,占用: 125M)
+back_log=500
+back log值指出在MySQL暂时停止回答新请求之前的短时间内多少个请求可以被存在堆栈中。也就是说，如果MySal的连接数据达到max connections时，新来的请求将会被存在堆栈中，以等待某一连接释放资源，该堆栈的数量即back log，如果等待连接的数量超过back log,将不被授予连接资源，将会报: unauthenticated user xxxxxxxxxxxx NULL Connect NULL| login NULL 的待连接
+进程时.
+back log值不能超过TCP/IP连接的侦听队列的大小。若超过则无效，查看当前系统的TCP/IP连接的侦听队列的大小命令:cat /proc/sys/net/ipv4/tcp max syn backlog目前系统为1024。对于Linux系统推荐设置为小于512的整数。修改系统内核参数，) 查看mysql 当前系统默认back log值，命令:
+show variables like 'back_log'查看当前数量
+
+2.修改wait timeout参数值，由默认的8小时，修改为30分钟。
+wait_timeout=1800 (单位为秒)
+我对wait_timeout这个参数的理解: MySQL客户端的数据库连接闲置最大时间值说得比较通俗一点，就是当你的MySQL连接闲置超过一定时间后将会被强行关闭。MySQL默认的wait_timeout 值为8个小时，可以通过命令show variables like 'wait_timeout' 查看结果值:。设置这个值是非常有意义的，比如你的网站有大量的MySQL链接请求(每个MYSQL连接都是要内存资源开销的)，由于你的程序的原因有大量的连接请求空闲啥事也不干，白白占用内存资源，或者导致MSQL超过最大连接数从来无法新建连接导致Too many connections”的误。在设置之前你可以查看一下你的MYSQL的状态(可用show processlist)如果经常发现MYSOL中有大量的Sleep进程，则需要修改wait_timeout值了interactive_timeout: 服务器关闭交互式连接前等待活动的秒数。交互式客户端定义为在mysql_real_connect()中使用CLIENT_NTERACTIVE选项的客户端。
+wait_timeout:服务器关闭非交互连接之前等待活动的秒数。在线程启动时，根据全局wait_timeout值或全局 interactive_timeout值初始
+化会话wait_timeout值，取决于客户端类型(由mysal_rea_connect()的连接选项CLIENT_INTERACTIVE定义)这两个参数必须配合使用。否则单独设置wait_timeout无效
+
+3.修改max_connections参数值，由默认的151，修改为3000 (750M)
+max_connections=3000
+max_connections是指MySql的最大连接数，如果服务器的并发连接请求量比较大，建议调高此值，以增加并行连接数量，当然这建立在机器能支撑的情况下，因为如果连接数越多，介于MYSql会为每个连接提供连接缓中区，就会开销越多的内存，所以要活当调整该值，不能盲目提高设值。可以过'conn%'通配符查看当前状态的连接数量，以定夺该值的大小。MySQL服务器允许的最大连接数16384;查看系统当前最大连接数:
+show variables like 'max_connections'
+
+4.修改max_user_connections值，由默认的0，修改为800
+max_user_connections=800
+max_user_connections是指每个数据库用户的最大连接针对某一个账号的所有客户端并行连接到MYSQL服务的最大并行连接数。简单说是指同一个账号能够同时连接到mysa服务的最大连接数。设置为0表示不限制。
+目前默认值为: 0不受限制
+Max_used_connections:它是指从这次mysql服务启动到现在，同一时刻并行连接数的最大值。它不是指当前的连接情况，而是一个比较值。如果在过去某一个时刻，MYSQL服务同时有1000个请求连接过来，而之后再也没有出现这么大的并发请求时，则Max_used_connections=1000,请注意与show variables 里的max_user_connections的区别。默认为0表示无限大。香看max_user_connections值: 
+show variables like 'max_user_connections'
+
+5.修改thread_concurrency值，由目前默认的8，修改为64
+thread_concurrency=64
+thread_concurrency的值的正确与否,对mysql的性能影响很大,在多个cpu(或多核)的情况下，错误设置了thread_concurrency的值,会导致mysql不能充分利用多cpu(或多核),出现同一时刻只能一个cpu(或核)在工作的情况。thread_concurency应设为CPU核数的2倍。比如有一个双核的CPU.那thread_concurrency 的应该为4:2个双核的cpu,thread_concurrency的值应为8.
+比如:根据上面介绍我们目前系统的配置，可知道为4个CPU,每个CPU为8核，按照上面的计算规则，这儿应为:4*8*2=64
+查看系统当前thread concurrency默认配置命令:
+show variables like 'thread_concurrency'
+
+6.添加skip-name-resolve，默认被注释掉，没有该参数
+skip-name-resolve
+skip-name-resolve:禁止MySQL对外部连接进行DNS解析，使用这一选项可以消除MySQL进行DNS解析的时间。但需要注意，如果开启该选项，则所有远程主机连接授权都要使用IP地址方式，否则MYSQL将无法正常处理连接请求!
+
+7.skip-networking，默认被注释掉。没有该参数。skip-networking建议被注释掉，不要开启
+开启该选项可以彻底关闭MySQL的TCP/IP连接方式，如果WEB服务器是以远程连接的方式访问MySQL数据库服务器则不要开启该选项!否则将无法正常连接!
+
+8. default-storage-engine(设置MySQL的默认存储引擎)
+default-storage-engine= InnoDB(设置InnoDB类型，另外还可以设置MyISAM类型)
+
+设置创建数据库及表默认存储类型
+show table status like 'tablename'显示表的当前存储状态值
+查看MySQL有哪些存储状态及默认存储状态
+show engines.
+创建表并指定存储类型
+CREATE TABLE mytable (id int, title char(20)) ENGINE = INNODB
+修改表存储类型:
+Alter table tableName engine =engineName
+备注: 设置完后把以下几个开启:
+# Uncomment the following if you are using InnoDB tables
+innodb_data_home_dir = /var/lib/mysgl
+#innodb_data_file_path = ibdata1:1024Mibdata2:10M:autoextend (要注释掉，否则会创建一个新的把原来的替换的。)
+innodb_log_group_home_dir = /var/lib/mysgl
+# You can set .. buffer_pool_size up to 50 - 80 %
+# of RAM but beware of setting memory usage too high
+innodb_buffer_pool_size = 1000M
+innodb_additional_mem_pool_size = 20M
+# Set .. log file size to 25 % of buffer pool size
+innodb_log_file_size = 500M
+innodb_log_buffer_size = 20M
+innodb_flush_log_at_trx_commit = 0
+innodb_lock_wait_timeout = 50
+设置完后一定记得把MySQL安装目录地址(我们目前是默认安装所以地/ar/ib/mysal) 下的ib_ogfle0和ib_ogfle删除掉。否则重
+启MySQL起动失败。
+
+基础知识：
+1.MongoDB成为最好NoSQL数据库的原因是什么?
+答：以下特点使得MongoDB成为最好的NoSQL数据库：
+- 面向文件的
+- 高性能
+- 高可用性
+- 易扩展性
+- 丰富的查询语言
+
+2.Mysql 的存储引擎,myisam和innodb的区别。
+- .MyISAM 是非事务的存储引擎，适合用于频繁查询的应用。表锁，不会出现死锁，适合小数据，小并发。
+
+- .innodb是支持事务的存储引擎，合于插入和更新操作比较多的应用，设计合理的话是行锁（最大区别就在锁的级别上），适合大数据，大并发。
+
+3.MySQL数据库作发布系统的存储，一天五万条以上的增量，预计运维三年,怎么优化
+a. 设计良好的数据库结构，允许部分数据冗余，尽量避免join查询，提高效率。
+b. 选择合适的表字段数据类型和存储引擎，适当的添加索引。
+c. mysql库主从读写分离。
+d. 找规律分表，减少单表中的数据量提高查询速度。
+e。添加缓存机制，比如memcached，apc等。
+f. 不经常改动的页面，生成静态页面。
+g. 书写高效率的SQL。比如 SELECT * FROM TABEL 改为 SELECT field_1, field_2, field_3 FROM TABLE.
+
+4.锁的优化策略
+① 读写分离
+② 分段加锁
+③ 减少锁持有的时间
+④ 多个线程尽量以相同的顺序去获取资源
+
+5.索引对数据库系统的负面影响是什么？
+创建索引和维护索引需要耗费时间，这个时间随着数据量的增加而增加；索引需要占用物理空间，不光是表需要占用数据空间，每个索引也需要占用物理空间；当对表进行增、删、改、的时候索引也要动态维护，这样就降低了数据的维护速度。
+
+6.为数据表建立索引的原则有哪些？
+在最频繁使用的、用以缩小查询范围的字段上建立索引。
+在频繁使用的、需要排序的字段上建立索引
+
+
+
+
+
+
+
