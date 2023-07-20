@@ -118,6 +118,19 @@ innodb_flush_log_at_trx_commit = 0
 innodb_lock_wait_timeout = 50
 设置完后一定记得把MySQL安装目录地址(我们目前是默认安装所以地/ar/ib/mysal) 下的ib_ogfle0和ib_ogfle删除掉。否则重
 启MySQL起动失败。
+9. 数据表损坏的修复⽅式有哪些？
+使⽤ myisamchk 来修复，具体步骤：
+a.修复前将mysql服务停⽌。
+b.打开命令⾏⽅式，然后进⼊到mysql的/bin⽬录。
+c.执⾏myisamchk –recover 数据库所在路径/*.MYI
+使⽤repair table 或者 OPTIMIZE table命令来修复，REPAIR TABLE table_name 修复表 OPTIMIZE TABLE table_name 优化表 REPAIR TABLE ⽤于修复被破坏的表。
+OPTIMIZE TABLE ⽤于回收闲置的数据库空间，当表上的数据⾏被删除时，所占据的磁盘空间并没有⽴即被回收，使⽤了OPTIMIZE TABLE命令后这些空间将被回收，并且对磁盘上的数据⾏进⾏重排（注意：是磁盘上，⽽⾮数据库）
+10. MySQL数据库cpu飙升到100%的话他怎么处理
+列出所有进程 show processlist 观察所有进程 多秒没有状态变化的(⼲掉)
+查看慢查询，找出执⾏时间⻓的sql；
+explain分析sql是否⾛索引，sql优化；
+检查其他⼦系统是否正常，是否缓存失效引起，需要查看buffer命中率；
+
 
 基础知识：
 1.MongoDB成为最好NoSQL数据库的原因是什么?
